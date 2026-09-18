@@ -35,14 +35,13 @@ private val fmt=SimpleDateFormat("dd/MM/yyyy",Locale("es","CL"))
  val context=LocalContext.current
  val ws by dao.workspaces().collectAsStateWithLifecycle(emptyList()); val tasks by dao.tasks().collectAsStateWithLifecycle(emptyList())
  var tab by remember{mutableIntStateOf(0)}; var workOpen by remember{mutableStateOf<String?>(null)}; var add by remember{mutableStateOf(false)}; var selectedTask by remember{mutableStateOf<Task?>(null)}; val scope=rememberCoroutineScope()
- LaunchedEffect(ws){if(ws.isEmpty()) listOf("Hospital","GameOverTV","Climarte","RLB").forEach{dao.addWorkspace(Workspace(name=it))}}
+ LaunchedEffect(ws){if(ws.none{it.name=="Hospital"}) dao.addWorkspace(Workspace(name="Hospital"))}
  MaterialTheme(colorScheme=lightColorScheme()){
-  Scaffold(topBar={TopAppBar(title={Column{Text("MiAgenda");Text("Tu jornada, organizada",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)}})},
-   floatingActionButton={if(tab==0) FloatingActionButton(onClick={add=true}){Icon(Icons.Outlined.Add,"Nueva tarea")}},
-   bottomBar={NavigationBar{listOf("Hoy" to Icons.Outlined.Today,"Trabajos" to Icons.Outlined.WorkOutline,"Hospital" to Icons.Outlined.LocalHospital,"Agenda" to Icons.Outlined.CalendarMonth,"Respaldo" to Icons.Outlined.CloudUpload).forEachIndexed{i,p->NavigationBarItem(tab==i,{tab=i},{Icon(p.second,null)},label={Text(p.first)})}}}
-  ){p->Box(Modifier.padding(p).fillMaxSize()){when(tab){0->Today(tasks,ws){selectedTask=it};1->if(workOpen=="GameOverTV") GameOverHub(dao) else Works(ws){workOpen=it};2->HospitalHub(dao);3->Agenda(tasks);else->BackupScreen()}}}
+  Scaffold(topBar={TopAppBar(title={Column{Text("Hospital");Text("MiAgenda · gestión hospitalaria",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)}})},
+   bottomBar={NavigationBar{listOf("Hospital" to Icons.Outlined.LocalHospital,"Agenda" to Icons.Outlined.CalendarMonth,"Respaldo" to Icons.Outlined.CloudUpload).forEachIndexed{i,p->NavigationBarItem(tab==i,{tab=i},{Icon(p.second,null)},label={Text(p.first)})}}}
+  ){p->Box(Modifier.padding(p).fillMaxSize()){when(tab){0->HospitalHub(dao);1->Agenda(tasks.filter{t->ws.firstOrNull{it.id==t.workspaceId}?.name=="Hospital"});else->BackupScreen()}}}
   if(selectedTask!=null) TaskActionsDialog(selectedTask!!,{selectedTask=null},{scope.launch{dao.updateTask(selectedTask!!.copy(status=if(selectedTask!!.status=="PENDING")"DONE" else "PENDING"))};selectedTask=null},{scope.launch{dao.deleteTask(selectedTask!!)};selectedTask=null})
-  if(add) NewTaskDialog(ws,{add=false}){w,title,category,due,detail->scope.launch{val id=dao.addTask(Task(workspaceId=w,category=category,title=title,detail=detail,dueAt=due));ReminderWorker.scheduleSequence(context,id,title,due,if(category.contains("contrat",true)) listOf(43200,21600,10080,2880) else listOf(2880,1440,120))};add=false}
+  if(add) NewTaskDialog(ws.filter{it.name=="Hospital"},{add=false}){w,title,category,due,detail->scope.launch{val id=dao.addTask(Task(workspaceId=w,category=category,title=title,detail=detail,dueAt=due));ReminderWorker.scheduleSequence(context,id,title,due,if(category.contains("contrat",true)) listOf(43200,21600,10080,2880) else listOf(2880,1440,120))};add=false}
  }
 }
 @OptIn(ExperimentalMaterial3Api::class)
