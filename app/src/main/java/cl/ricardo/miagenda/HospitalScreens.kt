@@ -8,6 +8,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cl.ricardo.miagenda.data.*
 import kotlinx.coroutines.launch
@@ -28,11 +29,11 @@ private val hospitalFmt=SimpleDateFormat("dd/MM/yyyy",Locale("es","CL"))
  }}
 @Composable private fun Metric(label:String,n:Int){Column{Text(n.toString(),style=MaterialTheme.typography.titleLarge);Text(label,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}}
 @Composable fun HospitalSection(type:String,records:List<HospitalRecord>,containers:List<ContainerAsset>,dao:AgendaDao,back:()->Unit){
- val scope=rememberCoroutineScope();var add by remember{mutableStateOf(false)}
+ val scope=rememberCoroutineScope();val context=LocalContext.current;var add by remember{mutableStateOf(false)}
  val title=when(type){"CONTRACT"->"Contratos";"TALK"->"Charlas";"INSPECTION"->"Inspecciones";"CONTAINER_CHANGE"->"Cambios de contenedor";else->"Inventario por servicio"}
  Column(Modifier.fillMaxSize().padding(20.dp)){Row{IconButton(onClick=back){Icon(Icons.Outlined.ArrowBack,null)};Column{Text(title,style=MaterialTheme.typography.headlineSmall);Text("Hospital",color=MaterialTheme.colorScheme.onSurfaceVariant)}};Spacer(Modifier.height(12.dp))
  if(type=="INVENTORY") InventoryList(containers) else {Button(onClick={add=true}){Icon(Icons.Outlined.Add,null);Spacer(Modifier.width(6.dp));Text("Agregar")};Spacer(Modifier.height(8.dp));LazyColumn{items(records.filter{it.type==type}){r->HorizontalDivider();ListItem(headlineContent={Text(r.title)},supportingContent={Text(r.service+(if(r.location.isNotBlank())" · "+r.location else "")+" · "+hospitalFmt.format(Date(r.date)))},trailingContent={Text(r.status)})}}}}
- if(add){if(type=="CONTAINER_CHANGE") ContainerDialog({add=false}){service,loc,kind,liters,color,qty,notes->scope.launch{dao.addContainer(ContainerAsset(service=service,location=loc,kind=kind,capacityLiters=liters,color=color,quantity=qty,notes=notes));dao.addHospitalRecord(HospitalRecord(type=type,service=service,location=loc,date=System.currentTimeMillis(),title="Habilitación: "+kind,detail=notes))};add=false} else SmartRecordDialog(type,{add=false}){service,loc,name,detail,date->scope.launch{dao.addHospitalRecord(HospitalRecord(type=type,service=service,location=loc,date=date,title=name,detail=detail))};add=false}}
+ if(add){if(type=="CONTAINER_CHANGE") ContainerDialog({add=false}){service,loc,kind,liters,color,qty,notes->scope.launch{dao.addContainer(ContainerAsset(service=service,location=loc,kind=kind,capacityLiters=liters,color=color,quantity=qty,notes=notes));dao.addHospitalRecord(HospitalRecord(type=type,service=service,location=loc,date=System.currentTimeMillis(),title="Habilitación: "+kind,detail=notes))};add=false} else SmartRecordDialog(type,{add=false}){service,loc,name,detail,date->scope.launch{dao.addHospitalRecord(HospitalRecord(type=type,service=service,location=loc,date=date,title=name,detail=detail));if(type=="CONTRACT"){val ws=dao.findWorkspace("Hospital");if(ws!=null){val id=dao.addTask(Task(workspaceId=ws.id,category="Renovación de contrato",title="Renovar contrato: "+name,detail=service+(if(detail.isNotBlank())+" · "+detail else ""),dueAt=date));ReminderWorker.scheduleSequence(context,id,"Renovar contrato: "+name,date,listOf(43200,21600,10080,2880))}}};add=false}}
  }}
 @Composable fun InventoryList(data:List<ContainerAsset>){var filter by remember{mutableStateOf("")};OutlinedTextField(filter,{filter=it},Modifier.fillMaxWidth(),label={Text("Filtrar por servicio")},leadingIcon={Icon(Icons.Outlined.Search,null)});Spacer(Modifier.height(8.dp));val filtered=data.filter{filter.isBlank()||it.service.contains(filter,true)};LazyColumn{items(filtered){item->HorizontalDivider();ListItem(headlineContent={Text(item.quantity.toString()+" × "+item.kind+(item.capacityLiters?.let{" · "+it+" L"}?:""))},supportingContent={Text(item.service+" · "+item.location+" · "+item.color+(if(item.support)" · con soporte" else ""))})}}}
 @Composable fun SmartRecordDialog(type:String,close:()->Unit,save:(String,String,String,String,Long)->Unit){
