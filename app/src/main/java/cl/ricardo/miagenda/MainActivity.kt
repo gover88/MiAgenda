@@ -31,13 +31,14 @@ private val fmt=SimpleDateFormat("dd/MM/yyyy",Locale("es","CL"))
 @Composable fun MiAgendaApp(dao:AgendaDao){
  val context=LocalContext.current
  val ws by dao.workspaces().collectAsStateWithLifecycle(emptyList()); val tasks by dao.tasks().collectAsStateWithLifecycle(emptyList())
- var tab by remember{mutableIntStateOf(0)}; var add by remember{mutableStateOf(false)}; val scope=rememberCoroutineScope()
+ var tab by remember{mutableIntStateOf(0)}; var add by remember{mutableStateOf(false)}; var selectedTask by remember{mutableStateOf<Task?>(null)}; val scope=rememberCoroutineScope()
  LaunchedEffect(ws){if(ws.isEmpty()) listOf("Hospital","GameOverTV","Climarte","RLB").forEach{dao.addWorkspace(Workspace(name=it))}}
  MaterialTheme(colorScheme=lightColorScheme()){
   Scaffold(topBar={TopAppBar(title={Column{Text("MiAgenda");Text("Tu jornada, organizada",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)}})},
    floatingActionButton={if(tab==0) FloatingActionButton(onClick={add=true}){Icon(Icons.Outlined.Add,"Nueva tarea")}},
    bottomBar={NavigationBar{listOf("Hoy" to Icons.Outlined.Today,"Trabajos" to Icons.Outlined.WorkOutline,"Hospital" to Icons.Outlined.LocalHospital,"Agenda" to Icons.Outlined.CalendarMonth).forEachIndexed{i,p->NavigationBarItem(tab==i,{tab=i},{Icon(p.second,null)},label={Text(p.first)})}}}
-  ){p->Box(Modifier.padding(p).fillMaxSize()){when(tab){0->Today(tasks,ws){scope.launch{dao.updateTask(it.copy(status=if(it.status=="PENDING")"DONE" else "PENDING"))}};1->Works(ws);2->HospitalHub(dao);else->Agenda(tasks)}}}
+  ){p->Box(Modifier.padding(p).fillMaxSize()){when(tab){0->Today(tasks,ws){selectedTask=it};1->Works(ws);2->HospitalHub(dao);else->Agenda(tasks)}}}
+  if(selectedTask!=null) TaskActionsDialog(selectedTask!!,{selectedTask=null},{scope.launch{dao.updateTask(selectedTask!!.copy(status=if(selectedTask!!.status=="PENDING")"DONE" else "PENDING"))};selectedTask=null},{scope.launch{dao.deleteTask(selectedTask!!)};selectedTask=null})
   if(add) NewTaskDialog(ws,{add=false}){w,title,category,due,detail->scope.launch{val id=dao.addTask(Task(workspaceId=w,category=category,title=title,detail=detail,dueAt=due));ReminderWorker.schedule(context,id,title,due,2880)};add=false}
  }
 }
@@ -79,4 +80,7 @@ private val fmt=SimpleDateFormat("dd/MM/yyyy",Locale("es","CL"))
   else week.take(4).forEach{t->HorizontalDivider(Modifier.padding(vertical=6.dp));Text(t.title,style=MaterialTheme.typography.bodyMedium);Text(fmt.format(Date(t.dueAt))+" · "+t.category,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
   if(week.size>4)Text("+ "+(week.size-4)+" pendientes más",modifier=Modifier.padding(top=8.dp),style=MaterialTheme.typography.labelMedium)
  }}
+}
+@Composable fun TaskActionsDialog(task:Task,close:()->Unit,toggle:()->Unit,delete:()->Unit){
+ AlertDialog(onDismissRequest=close,title={Text(task.title)},text={Column{Text(task.detail.ifBlank{"Sin notas"});Spacer(Modifier.height(8.dp));Text("Fecha: "+fmt.format(Date(task.dueAt)));Text("Estado: "+if(task.status=="DONE")"Completada" else "Pendiente")}},confirmButton={Button(onClick=toggle){Text(if(task.status=="DONE")"Marcar pendiente" else "Completar")}},dismissButton={Row{TextButton(onClick=delete){Text("Eliminar")};TextButton(onClick=close){Text("Cerrar")}}})
 }
