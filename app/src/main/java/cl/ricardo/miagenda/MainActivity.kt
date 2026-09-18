@@ -30,7 +30,7 @@ private val fmt=SimpleDateFormat("dd/MM/yyyy",Locale("es","CL"))
   Scaffold(topBar={TopAppBar(title={Column{Text("MiAgenda");Text("Tu jornada, organizada",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)}})},
    floatingActionButton={if(tab==0) FloatingActionButton(onClick={add=true}){Icon(Icons.Outlined.Add,"Nueva tarea")}},
    bottomBar={NavigationBar{listOf("Hoy" to Icons.Outlined.Today,"Trabajos" to Icons.Outlined.WorkOutline,"Hospital" to Icons.Outlined.LocalHospital,"Agenda" to Icons.Outlined.CalendarMonth).forEachIndexed{i,p->NavigationBarItem(tab==i,{tab=i},{Icon(p.second,null)},label={Text(p.first)})}}}
-  ){p->Box(Modifier.padding(p).fillMaxSize()){when(tab){0->Today(tasks){scope.launch{dao.updateTask(it.copy(status=if(it.status=="PENDING")"DONE" else "PENDING"))}};1->Works(ws);2->Hospital();else->Agenda(tasks)}}}
+  ){p->Box(Modifier.padding(p).fillMaxSize()){when(tab){0->Today(tasks){scope.launch{dao.updateTask(it.copy(status=if(it.status=="PENDING")"DONE" else "PENDING"))}};1->Works(ws);2->HospitalHub(dao);else->Agenda(tasks)}}}
   if(add) NewTaskDialog(ws,{add=false}){w,title,category,due,detail->scope.launch{dao.addTask(Task(workspaceId=w,category=category,title=title,detail=detail,dueAt=due))};add=false}
  }
 }
