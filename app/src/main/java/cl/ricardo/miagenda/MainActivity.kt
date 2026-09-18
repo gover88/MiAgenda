@@ -1,6 +1,9 @@
 package cl.ricardo.miagenda
 import android.app.DatePickerDialog
 import android.os.Bundle
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
@@ -19,10 +22,14 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
-class MainActivity:ComponentActivity(){override fun onCreate(b:Bundle?){super.onCreate(b);setContent{MiAgendaApp(AppDatabase.get(this).dao())}}}
+class MainActivity:ComponentActivity(){
+ private val askNotifications=registerForActivityResult(ActivityResultContracts.RequestPermission()){}
+ override fun onCreate(b:Bundle?){super.onCreate(b);if(android.os.Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS);setContent{MiAgendaApp(AppDatabase.get(this).dao())}}
+}
 private val fmt=SimpleDateFormat("dd/MM/yyyy",Locale("es","CL"))
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun MiAgendaApp(dao:AgendaDao){
+ val context=LocalContext.current
  val ws by dao.workspaces().collectAsStateWithLifecycle(emptyList()); val tasks by dao.tasks().collectAsStateWithLifecycle(emptyList())
  var tab by remember{mutableIntStateOf(0)}; var add by remember{mutableStateOf(false)}; val scope=rememberCoroutineScope()
  LaunchedEffect(ws){if(ws.isEmpty()) listOf("Hospital","GameOverTV","Climarte","RLB").forEach{dao.addWorkspace(Workspace(name=it))}}
@@ -31,7 +38,7 @@ private val fmt=SimpleDateFormat("dd/MM/yyyy",Locale("es","CL"))
    floatingActionButton={if(tab==0) FloatingActionButton(onClick={add=true}){Icon(Icons.Outlined.Add,"Nueva tarea")}},
    bottomBar={NavigationBar{listOf("Hoy" to Icons.Outlined.Today,"Trabajos" to Icons.Outlined.WorkOutline,"Hospital" to Icons.Outlined.LocalHospital,"Agenda" to Icons.Outlined.CalendarMonth).forEachIndexed{i,p->NavigationBarItem(tab==i,{tab=i},{Icon(p.second,null)},label={Text(p.first)})}}}
   ){p->Box(Modifier.padding(p).fillMaxSize()){when(tab){0->Today(tasks,ws){scope.launch{dao.updateTask(it.copy(status=if(it.status=="PENDING")"DONE" else "PENDING"))}};1->Works(ws);2->HospitalHub(dao);else->Agenda(tasks)}}}
-  if(add) NewTaskDialog(ws,{add=false}){w,title,category,due,detail->scope.launch{dao.addTask(Task(workspaceId=w,category=category,title=title,detail=detail,dueAt=due))};add=false}
+  if(add) NewTaskDialog(ws,{add=false}){w,title,category,due,detail->scope.launch{val id=dao.addTask(Task(workspaceId=w,category=category,title=title,detail=detail,dueAt=due));ReminderWorker.schedule(context,id,title,due,2880)};add=false}
  }
 }
 @OptIn(ExperimentalMaterial3Api::class)
