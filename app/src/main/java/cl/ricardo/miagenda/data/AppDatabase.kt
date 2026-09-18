@@ -18,12 +18,12 @@ import kotlinx.coroutines.flow.Flow
  @Update suspend fun updateContainer(v:ContainerAsset)
  @Delete suspend fun deleteContainer(v:ContainerAsset)
 }
-@Database(entities=[Workspace::class,Task::class,HospitalRecord::class,ContainerAsset::class],version=1,exportSchema=false)
+@Database(entities=[Workspace::class,Task::class,HospitalRecord::class,ContainerAsset::class],version=2,exportSchema=false)
 abstract class AppDatabase:RoomDatabase(){
  abstract fun dao():AgendaDao
  companion object{
   @Volatile private var INSTANCE:AppDatabase?=null
-  fun get(c:android.content.Context):AppDatabase=INSTANCE?:synchronized(this){INSTANCE?:Room.databaseBuilder(c.applicationContext,AppDatabase::class.java,"miagenda.db").build().also{INSTANCE=it}}
+  fun get(c:android.content.Context):AppDatabase=INSTANCE?:synchronized(this){INSTANCE?:Room.databaseBuilder(c.applicationContext,AppDatabase::class.java,"miagenda.db").fallbackToDestructiveMigration().build().also{INSTANCE=it}}
   fun closeInstance(){synchronized(this){INSTANCE?.close();INSTANCE=null}}
  }
 }
