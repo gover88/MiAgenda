@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.content.Intent
 import androidx.core.content.FileProvider
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
@@ -87,11 +88,14 @@ private val fmt=SimpleDateFormat("dd/MM/yyyy",Locale("es","CL"))
  AlertDialog(onDismissRequest=close,title={Text(task.title)},text={Column{Text(task.detail.ifBlank{"Sin notas"});Spacer(Modifier.height(8.dp));Text("Fecha: "+fmt.format(Date(task.dueAt)));Text("Estado: "+if(task.status=="DONE")"Completada" else "Pendiente")}},confirmButton={Button(onClick=toggle){Text(if(task.status=="DONE")"Marcar pendiente" else "Completar")}},dismissButton={Row{TextButton(onClick=delete){Text("Eliminar")};TextButton(onClick=close){Text("Cerrar")}}})
 }
 @Composable fun BackupScreen(){
- val context=LocalContext.current;var last by remember{mutableStateOf(context.getSharedPreferences("backup",0).getString("last",null))}
+ val context=LocalContext.current
+ val restore=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){uri->if(uri!=null) BackupManager.restoreFromUri(context,uri)}
+ var last by remember{mutableStateOf(context.getSharedPreferences("backup",0).getString("last",null))}
  Column(Modifier.fillMaxSize().padding(20.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
   Text("Respaldo",style=MaterialTheme.typography.headlineSmall);Text("Protege tu información y guarda una copia en Google Drive.",color=MaterialTheme.colorScheme.onSurfaceVariant)
   HorizontalDivider();Text("Último respaldo",style=MaterialTheme.typography.labelMedium);Text(last?:"Aún no has creado una copia")
   Button(onClick={val file=BackupManager.createLocalBackup(context);val uri=FileProvider.getUriForFile(context,context.packageName+".files",file);val intent=Intent(Intent.ACTION_SEND).apply{type="application/octet-stream";putExtra(Intent.EXTRA_STREAM,uri);putExtra(Intent.EXTRA_TITLE,"MiAgenda - Respaldo");addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)};context.startActivity(Intent.createChooser(intent,"Guardar respaldo en Google Drive"));val value=java.text.SimpleDateFormat("dd/MM/yyyy HH:mm",Locale("es","CL")).format(Date());context.getSharedPreferences("backup",0).edit().putString("last",value).apply();last=value}){Icon(Icons.Outlined.CloudUpload,null);Spacer(Modifier.width(8.dp));Text("Crear copia en Drive")}
-  Text("La copia contiene la base de datos de MiAgenda. La restauración automática se habilitará en la siguiente etapa.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+  OutlinedButton(onClick={restore.launch(arrayOf("application/octet-stream","application/x-sqlite3","*/*"))}){Icon(Icons.Outlined.Restore,null);Spacer(Modifier.width(8.dp));Text("Restaurar una copia")}
+  Text("Al restaurar, MiAgenda valida que el archivo sea una base SQLite y conserva una copia de seguridad de los datos actuales antes de reemplazarlos. Reinicia la app después de restaurar.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
  }
 }
