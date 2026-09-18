@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao interface AgendaDao {
  @Query("SELECT * FROM workspaces WHERE archived=0 ORDER BY name") fun workspaces():Flow<List<Workspace>>
  @Insert suspend fun addWorkspace(v:Workspace):Long
+ @Query("SELECT * FROM workspaces WHERE name=:name LIMIT 1") suspend fun findWorkspace(name:String):Workspace?
  @Query("SELECT * FROM tasks ORDER BY CASE WHEN status='PENDING' THEN 0 ELSE 1 END,dueAt") fun tasks():Flow<List<Task>>
  @Insert suspend fun addTask(v:Task):Long
  @Update suspend fun updateTask(v:Task)
