@@ -21,4 +21,4 @@ import kotlinx.coroutines.flow.Flow
 abstract class AppDatabase:RoomDatabase(){abstract fun dao():AgendaDao
  companion object{@Volatile private var INSTANCE:AppDatabase?=null
  fun get(c:android.content.Context)=INSTANCE?:synchronized(this){INSTANCE?:Room.databaseBuilder(c.applicationContext,AppDatabase::class.java,"miagenda.db").build().also{INSTANCE=it}}}
-}
+ fun closeInstance(){synchronized(this){INSTANCE?.close();INSTANCE=null}}\n}
