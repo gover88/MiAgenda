@@ -47,21 +47,23 @@ private val fmt=SimpleDateFormat("dd/MM/yyyy",Locale("es","CL"))
 }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun Today(tasks:List<Task>,workspaces:List<Workspace>,toggle:(Task)->Unit){
- var period by remember{mutableStateOf("Hoy")};var work by remember{mutableStateOf<Long?>(null)}
+ var period by remember{mutableStateOf("Hoy")};var work by remember{mutableStateOf<Long?>(null)};var showHistory by remember{mutableStateOf(false)}
  val now=Calendar.getInstance();val from=Calendar.getInstance().apply{set(Calendar.HOUR_OF_DAY,0);set(Calendar.MINUTE,0);set(Calendar.SECOND,0);set(Calendar.MILLISECOND,0)}.timeInMillis
  val to=Calendar.getInstance().apply{setTimeInMillis(from);when(period){"Hoy"->add(Calendar.DAY_OF_YEAR,1);"Semana"->add(Calendar.DAY_OF_YEAR,7);else->add(Calendar.MONTH,1)}}.timeInMillis
+ val completed=tasks.filter{it.status=="DONE"&&(work==null||it.workspaceId==work)}.sortedByDescending{it.dueAt}
  val overdue=tasks.filter{it.status=="PENDING"&&it.dueAt<from&&(work==null||it.workspaceId==work)}.sortedBy{it.dueAt}
  val visible=tasks.filter{it.status=="PENDING"&&it.dueAt in from until to&&(work==null||it.workspaceId==work)}.sortedBy{it.dueAt}
  LazyColumn(Modifier.fillMaxSize().padding(horizontal=20.dp),contentPadding=PaddingValues(vertical=18.dp)){
   item{Text("Tu jornada",style=MaterialTheme.typography.headlineSmall);Text("Filtra por período y trabajo",color=MaterialTheme.colorScheme.onSurfaceVariant);Spacer(Modifier.height(14.dp))
    Text("Período",style=MaterialTheme.typography.labelMedium);SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()){listOf("Hoy","Semana","Mes").forEachIndexed{i,v->SegmentedButton(selected=period==v,onClick={period=v},shape=SegmentedButtonDefaults.itemShape(i,3)){Text(v)}}};Spacer(Modifier.height(12.dp))
    Text("Trabajo",style=MaterialTheme.typography.labelMedium);LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp),contentPadding=PaddingValues(vertical=6.dp)){item{FilterChip(selected=work==null,onClick={work=null},label={Text("Todos")})};items(workspaces){w->FilterChip(selected=work==w.id,onClick={work=w.id},label={Text(w.name)})}}
-   Spacer(Modifier.height(8.dp));Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(visible.size.toString()+" pendiente"+if(visible.size==1)"" else "s",style=MaterialTheme.typography.titleMedium);if(overdue.isNotEmpty())Text(overdue.size.toString()+" vencida"+if(overdue.size==1)"" else "s",color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.titleMedium)};Spacer(Modifier.height(8.dp))
+   Spacer(Modifier.height(8.dp));Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){FilterChip(selected=showHistory,onClick={showHistory=!showHistory},label={Text("Historial ("+completed.size+")")});Text(visible.size.toString()+" pendiente"+if(visible.size==1)"" else "s",style=MaterialTheme.typography.titleMedium);if(overdue.isNotEmpty())Text(overdue.size.toString()+" vencida"+if(overdue.size==1)"" else "s",color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.titleMedium)};Spacer(Modifier.height(8.dp))
    if(overdue.isNotEmpty()){Text("Vencidas",style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.error);overdue.take(3).forEach{t->val wn=workspaces.firstOrNull{it.id==t.workspaceId}?.name?:"Trabajo";ListItem(modifier=Modifier.clickable{toggle(t)},headlineContent={Text(t.title)},supportingContent={Text(wn+" · "+fmt.format(Date(t.dueAt)))},leadingContent={Icon(Icons.Outlined.Warning,null,tint=MaterialTheme.colorScheme.error)})};HorizontalDivider();Spacer(Modifier.height(8.dp));Text(period,style=MaterialTheme.typography.labelLarge)}
 
   }
-  if(visible.isEmpty())item{Text("No tienes pendientes para estos filtros.",color=MaterialTheme.colorScheme.onSurfaceVariant)}
-  else items(visible,key={it.id}){t->val wn=workspaces.firstOrNull{it.id==t.workspaceId}?.name?:"Trabajo";HorizontalDivider();ListItem(modifier=Modifier.clickable{toggle(t)},headlineContent={Text(t.title)},supportingContent={Text(wn+" · "+fmt.format(Date(t.dueAt))+" · "+t.category)},leadingContent={Icon(Icons.Outlined.RadioButtonUnchecked,null)})}
+  if(showHistory&&completed.isNotEmpty())items(completed,key={"done_"+it.id}){t->val wn=workspaces.firstOrNull{it.id==t.workspaceId}?.name?:"Trabajo";HorizontalDivider();ListItem(modifier=Modifier.clickable{toggle(t)},headlineContent={Text(t.title)},supportingContent={Text(wn+" · Completada · "+fmt.format(Date(t.dueAt)))},leadingContent={Icon(Icons.Outlined.CheckCircle,null)})}
+  if(!showHistory&&visible.isEmpty())item{Text("No tienes pendientes para estos filtros.",color=MaterialTheme.colorScheme.onSurfaceVariant)}
+  else if(!showHistory) items(visible,key={it.id}){t->val wn=workspaces.firstOrNull{it.id==t.workspaceId}?.name?:"Trabajo";HorizontalDivider();ListItem(modifier=Modifier.clickable{toggle(t)},headlineContent={Text(t.title)},supportingContent={Text(wn+" · "+fmt.format(Date(t.dueAt))+" · "+t.category)},leadingContent={Icon(Icons.Outlined.RadioButtonUnchecked,null)})}
  }
 }
 @Composable fun Works(ws:List<Workspace>)=LazyColumn(Modifier.fillMaxSize().padding(horizontal=20.dp),contentPadding=PaddingValues(vertical=18.dp)){item{Text("Trabajos",style=MaterialTheme.typography.headlineSmall);Text("Tus áreas de trabajo",color=MaterialTheme.colorScheme.onSurfaceVariant);Spacer(Modifier.height(12.dp))};items(ws){HorizontalDivider();ListItem(headlineContent={Text(it.name)},trailingContent={Icon(Icons.Outlined.ChevronRight,null)})}}
