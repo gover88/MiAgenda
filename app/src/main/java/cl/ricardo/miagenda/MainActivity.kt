@@ -42,7 +42,7 @@ private val fmt=SimpleDateFormat("dd/MM/yyyy",Locale("es","CL"))
    bottomBar={NavigationBar{listOf("Hoy" to Icons.Outlined.Today,"Trabajos" to Icons.Outlined.WorkOutline,"Hospital" to Icons.Outlined.LocalHospital,"Agenda" to Icons.Outlined.CalendarMonth,"Respaldo" to Icons.Outlined.CloudUpload).forEachIndexed{i,p->NavigationBarItem(tab==i,{tab=i},{Icon(p.second,null)},label={Text(p.first)})}}}
   ){p->Box(Modifier.padding(p).fillMaxSize()){when(tab){0->Today(tasks,ws){selectedTask=it};1->Works(ws);2->HospitalHub(dao);3->Agenda(tasks);else->BackupScreen()}}}
   if(selectedTask!=null) TaskActionsDialog(selectedTask!!,{selectedTask=null},{scope.launch{dao.updateTask(selectedTask!!.copy(status=if(selectedTask!!.status=="PENDING")"DONE" else "PENDING"))};selectedTask=null},{scope.launch{dao.deleteTask(selectedTask!!)};selectedTask=null})
-  if(add) NewTaskDialog(ws,{add=false}){w,title,category,due,detail->scope.launch{val id=dao.addTask(Task(workspaceId=w,category=category,title=title,detail=detail,dueAt=due));ReminderWorker.schedule(context,id,title,due,2880)};add=false}
+  if(add) NewTaskDialog(ws,{add=false}){w,title,category,due,detail->scope.launch{val id=dao.addTask(Task(workspaceId=w,category=category,title=title,detail=detail,dueAt=due));ReminderWorker.scheduleSequence(context,id,title,due,if(category.contains("contrat",true)) listOf(43200,21600,10080,2880) else listOf(2880,1440,120))};add=false}
  }
 }
 @OptIn(ExperimentalMaterial3Api::class)
