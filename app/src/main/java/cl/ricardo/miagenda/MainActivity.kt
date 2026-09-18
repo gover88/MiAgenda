@@ -35,7 +35,7 @@ private val fmt=SimpleDateFormat("dd/MM/yyyy",Locale("es","CL"))
  }
 }
 @Composable fun Today(tasks:List<Task>,toggle:(Task)->Unit)=LazyColumn(Modifier.fillMaxSize().padding(horizontal=20.dp),contentPadding=PaddingValues(vertical=18.dp)){
- item{Text("Hoy",style=MaterialTheme.typography.headlineSmall);Text("Pendientes y próximos vencimientos",color=MaterialTheme.colorScheme.onSurfaceVariant);Spacer(Modifier.height(16.dp))}
+ item{Text("Hoy",style=MaterialTheme.typography.headlineSmall);Text("Pendientes y próximos vencimientos",color=MaterialTheme.colorScheme.onSurfaceVariant);Spacer(Modifier.height(12.dp));WeeklySummary(tasks);Spacer(Modifier.height(16.dp))}
  if(tasks.isEmpty())item{Text("No tienes pendientes. Pulsa + para crear tu primera tarea.")} else items(tasks,key={it.id}){t->HorizontalDivider();ListItem(modifier=Modifier.clickable{toggle(t)},headlineContent={Text(t.title)},supportingContent={Text(t.category+" · "+fmt.format(Date(t.dueAt)))},leadingContent={Icon(if(t.status=="DONE") Icons.Outlined.CheckCircle else Icons.Outlined.RadioButtonUnchecked,null)})}
 }
 @Composable fun Works(ws:List<Workspace>)=LazyColumn(Modifier.fillMaxSize().padding(horizontal=20.dp),contentPadding=PaddingValues(vertical=18.dp)){item{Text("Trabajos",style=MaterialTheme.typography.headlineSmall);Text("Tus áreas de trabajo",color=MaterialTheme.colorScheme.onSurfaceVariant);Spacer(Modifier.height(12.dp))};items(ws){HorizontalDivider();ListItem(headlineContent={Text(it.name)},trailingContent={Icon(Icons.Outlined.ChevronRight,null)})}}
@@ -50,4 +50,14 @@ private val fmt=SimpleDateFormat("dd/MM/yyyy",Locale("es","CL"))
   OutlinedButton(onClick={val cal=Calendar.getInstance().apply{timeInMillis=due};DatePickerDialog(c,{_,y,m,d->due=Calendar.getInstance().apply{set(y,m,d,9,0,0);set(Calendar.MILLISECOND,0)}.timeInMillis},cal.get(Calendar.YEAR),cal.get(Calendar.MONTH),cal.get(Calendar.DAY_OF_MONTH)).show()}){Icon(Icons.Outlined.CalendarMonth,null);Spacer(Modifier.width(8.dp));Text(fmt.format(Date(due)))}
   OutlinedTextField(detail,{detail=it},label={Text("Notas")},minLines=2)
  }},confirmButton={Button(enabled=title.isNotBlank()&&work!=0L,onClick={save(work,title.trim(),cat.trim(),due,detail.trim())}){Text("Guardar")}},dismissButton={TextButton(onClick=close){Text("Cancelar")}})
+}
+@Composable fun WeeklySummary(tasks:List<Task>){
+ val cal=Calendar.getInstance();cal.set(Calendar.HOUR_OF_DAY,0);cal.set(Calendar.MINUTE,0);cal.set(Calendar.SECOND,0);cal.set(Calendar.MILLISECOND,0)
+ val start=cal.timeInMillis;cal.add(Calendar.DAY_OF_YEAR,7);val end=cal.timeInMillis
+ val week=tasks.filter{it.status=="PENDING"&&it.dueAt in start until end}.sortedBy{it.dueAt}
+ Card(Modifier.fillMaxWidth()){Column(Modifier.padding(16.dp)){Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Column{Text("Esta semana",style=MaterialTheme.typography.titleMedium);Text("Próximos 7 días",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)};Text(week.size.toString(),style=MaterialTheme.typography.headlineSmall)}
+  if(week.isEmpty())Text("No tienes vencimientos próximos.",modifier=Modifier.padding(top=10.dp),color=MaterialTheme.colorScheme.onSurfaceVariant)
+  else week.take(4).forEach{t->HorizontalDivider(Modifier.padding(vertical=6.dp));Text(t.title,style=MaterialTheme.typography.bodyMedium);Text(fmt.format(Date(t.dueAt))+" · "+t.category,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
+  if(week.size>4)Text("+ "+(week.size-4)+" pendientes más",modifier=Modifier.padding(top=8.dp),style=MaterialTheme.typography.labelMedium)
+ }}
 }
