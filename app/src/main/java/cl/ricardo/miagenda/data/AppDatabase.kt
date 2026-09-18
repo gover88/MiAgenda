@@ -21,8 +21,10 @@ import kotlinx.coroutines.flow.Flow
  @Insert suspend fun addIptvClient(v:IptvClient):Long
  @Update suspend fun updateIptvClient(v:IptvClient)
  @Delete suspend fun deleteIptvClient(v:IptvClient)
+ @Query("SELECT * FROM iptv_renewals ORDER BY date DESC") fun iptvRenewals():Flow<List<IptvRenewal>>
+ @Insert suspend fun addIptvRenewal(v:IptvRenewal):Long
 }
-@Database(entities=[Workspace::class,Task::class,HospitalRecord::class,ContainerAsset::class,IptvClient::class],version=3,exportSchema=false)
+@Database(entities=[Workspace::class,Task::class,HospitalRecord::class,ContainerAsset::class,IptvClient::class,IptvRenewal::class],version=4,exportSchema=false)
 abstract class AppDatabase:RoomDatabase(){
  abstract fun dao():AgendaDao
  companion object{
