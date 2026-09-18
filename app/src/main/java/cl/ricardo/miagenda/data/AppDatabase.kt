@@ -9,12 +9,13 @@ import kotlinx.coroutines.flow.Flow
  @Update suspend fun updateTask(v:Task)
  @Query("SELECT * FROM hospital_records ORDER BY date DESC") fun hospitalRecords():Flow<List<HospitalRecord>>
  @Insert suspend fun addHospitalRecord(v:HospitalRecord):Long
+ @Update suspend fun updateHospitalRecord(v:HospitalRecord)
  @Query("SELECT * FROM containers WHERE active=1 ORDER BY service,location") fun containers():Flow<List<ContainerAsset>>
  @Insert suspend fun addContainer(v:ContainerAsset):Long
+ @Update suspend fun updateContainer(v:ContainerAsset)
 }
 @Database(entities=[Workspace::class,Task::class,HospitalRecord::class,ContainerAsset::class],version=1,exportSchema=false)
-abstract class AppDatabase:RoomDatabase(){
- abstract fun dao():AgendaDao
+abstract class AppDatabase:RoomDatabase(){abstract fun dao():AgendaDao
  companion object{@Volatile private var INSTANCE:AppDatabase?=null
  fun get(c:android.content.Context)=INSTANCE?:synchronized(this){INSTANCE?:Room.databaseBuilder(c.applicationContext,AppDatabase::class.java,"miagenda.db").build().also{INSTANCE=it}}}
 }
