@@ -3,6 +3,8 @@ import android.app.DatePickerDialog
 import android.os.Bundle
 import android.Manifest
 import android.content.pm.PackageManager
+import android.content.Intent
+import androidx.core.content.FileProvider
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -36,8 +38,8 @@ private val fmt=SimpleDateFormat("dd/MM/yyyy",Locale("es","CL"))
  MaterialTheme(colorScheme=lightColorScheme()){
   Scaffold(topBar={TopAppBar(title={Column{Text("MiAgenda");Text("Tu jornada, organizada",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)}})},
    floatingActionButton={if(tab==0) FloatingActionButton(onClick={add=true}){Icon(Icons.Outlined.Add,"Nueva tarea")}},
-   bottomBar={NavigationBar{listOf("Hoy" to Icons.Outlined.Today,"Trabajos" to Icons.Outlined.WorkOutline,"Hospital" to Icons.Outlined.LocalHospital,"Agenda" to Icons.Outlined.CalendarMonth).forEachIndexed{i,p->NavigationBarItem(tab==i,{tab=i},{Icon(p.second,null)},label={Text(p.first)})}}}
-  ){p->Box(Modifier.padding(p).fillMaxSize()){when(tab){0->Today(tasks,ws){selectedTask=it};1->Works(ws);2->HospitalHub(dao);else->Agenda(tasks)}}}
+   bottomBar={NavigationBar{listOf("Hoy" to Icons.Outlined.Today,"Trabajos" to Icons.Outlined.WorkOutline,"Hospital" to Icons.Outlined.LocalHospital,"Agenda" to Icons.Outlined.CalendarMonth,"Respaldo" to Icons.Outlined.CloudUpload).forEachIndexed{i,p->NavigationBarItem(tab==i,{tab=i},{Icon(p.second,null)},label={Text(p.first)})}}}
+  ){p->Box(Modifier.padding(p).fillMaxSize()){when(tab){0->Today(tasks,ws){selectedTask=it};1->Works(ws);2->HospitalHub(dao);3->Agenda(tasks);else->BackupScreen()}}}
   if(selectedTask!=null) TaskActionsDialog(selectedTask!!,{selectedTask=null},{scope.launch{dao.updateTask(selectedTask!!.copy(status=if(selectedTask!!.status=="PENDING")"DONE" else "PENDING"))};selectedTask=null},{scope.launch{dao.deleteTask(selectedTask!!)};selectedTask=null})
   if(add) NewTaskDialog(ws,{add=false}){w,title,category,due,detail->scope.launch{val id=dao.addTask(Task(workspaceId=w,category=category,title=title,detail=detail,dueAt=due));ReminderWorker.schedule(context,id,title,due,2880)};add=false}
  }
@@ -83,4 +85,13 @@ private val fmt=SimpleDateFormat("dd/MM/yyyy",Locale("es","CL"))
 }
 @Composable fun TaskActionsDialog(task:Task,close:()->Unit,toggle:()->Unit,delete:()->Unit){
  AlertDialog(onDismissRequest=close,title={Text(task.title)},text={Column{Text(task.detail.ifBlank{"Sin notas"});Spacer(Modifier.height(8.dp));Text("Fecha: "+fmt.format(Date(task.dueAt)));Text("Estado: "+if(task.status=="DONE")"Completada" else "Pendiente")}},confirmButton={Button(onClick=toggle){Text(if(task.status=="DONE")"Marcar pendiente" else "Completar")}},dismissButton={Row{TextButton(onClick=delete){Text("Eliminar")};TextButton(onClick=close){Text("Cerrar")}}})
+}
+@Composable fun BackupScreen(){
+ val context=LocalContext.current;var last by remember{mutableStateOf(context.getSharedPreferences("backup",0).getString("last",null))}
+ Column(Modifier.fillMaxSize().padding(20.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
+  Text("Respaldo",style=MaterialTheme.typography.headlineSmall);Text("Protege tu información y guarda una copia en Google Drive.",color=MaterialTheme.colorScheme.onSurfaceVariant)
+  HorizontalDivider();Text("Último respaldo",style=MaterialTheme.typography.labelMedium);Text(last?:"Aún no has creado una copia")
+  Button(onClick={val file=BackupManager.createLocalBackup(context);val uri=FileProvider.getUriForFile(context,context.packageName+".files",file);val intent=Intent(Intent.ACTION_SEND).apply{type="application/octet-stream";putExtra(Intent.EXTRA_STREAM,uri);putExtra(Intent.EXTRA_TITLE,"MiAgenda - Respaldo");addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)};context.startActivity(Intent.createChooser(intent,"Guardar respaldo en Google Drive"));val value=java.text.SimpleDateFormat("dd/MM/yyyy HH:mm",Locale("es","CL")).format(Date());context.getSharedPreferences("backup",0).edit().putString("last",value).apply();last=value}){Icon(Icons.Outlined.CloudUpload,null);Spacer(Modifier.width(8.dp));Text("Crear copia en Drive")}
+  Text("La copia contiene la base de datos de MiAgenda. La restauración automática se habilitará en la siguiente etapa.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+ }
 }
