@@ -26,7 +26,7 @@ class ReminderWorker(c:Context,p:WorkerParameters):Worker(c,p){
   private fun scheduleOne(c:Context,id:Long,title:String,due:Long,minutes:Int){
    val delay=(due-System.currentTimeMillis()-TimeUnit.MINUTES.toMillis(minutes.toLong())).coerceAtLeast(0)
    val label=when{minutes>=1440->"${minutes/1440} días";minutes>=60->"${minutes/60} horas";else->"$minutes min"}
-   WorkManager.getInstance(c).enqueueUniqueWork("task_$id_$minutes",ExistingWorkPolicy.REPLACE,OneTimeWorkRequestBuilder<ReminderWorker>().setInitialDelay(delay,TimeUnit.MILLISECONDS).setInputData(workDataOf("id" to (id.toInt()+minutes),"title" to "$title · vence en $label")).build())
+   WorkManager.getInstance(c).enqueueUniqueWork("task_${id}_$minutes",ExistingWorkPolicy.REPLACE,OneTimeWorkRequestBuilder<ReminderWorker>().setInitialDelay(delay,TimeUnit.MILLISECONDS).setInputData(workDataOf("id" to (id.toInt()+minutes),"title" to "$title · vence en $label")).build())
   }
  }
 }
