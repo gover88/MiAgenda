@@ -27,7 +27,7 @@ import java.util.*
 
 class MainActivity:ComponentActivity(){
  private val askNotifications=registerForActivityResult(ActivityResultContracts.RequestPermission()){}
- override fun onCreate(b:Bundle?){super.onCreate(b);if(android.os.Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS);setContent{MiAgendaApp(AppDatabase.get(this).dao())}}
+ override fun onCreate(b:Bundle?){\n  super.onCreate(b)\n  setContent{MiAgendaApp(AppDatabase.get(applicationContext).dao())}\n  if(android.os.Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED){\n   askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)\n  }\n }
 }
 private val fmt=SimpleDateFormat("dd/MM/yyyy",Locale("es","CL"))
 @OptIn(ExperimentalMaterial3Api::class)
