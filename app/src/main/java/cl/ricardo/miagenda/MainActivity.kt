@@ -27,7 +27,11 @@ import java.util.*
 
 class MainActivity:ComponentActivity(){
  private val askNotifications=registerForActivityResult(ActivityResultContracts.RequestPermission()){}
- override fun onCreate(b:Bundle?){\n  super.onCreate(b)\n  val dao=AppDatabase.get(applicationContext).dao()\n  setContent{MiAgendaApp(dao)}\n }
+ override fun onCreate(b:Bundle?){
+  super.onCreate(b)
+  val dao=AppDatabase.get(applicationContext).dao()
+  setContent{MiAgendaApp(dao)}
+ }
 }
 private val fmt=SimpleDateFormat("dd/MM/yyyy",Locale("es","CL"))
 @OptIn(ExperimentalMaterial3Api::class)
